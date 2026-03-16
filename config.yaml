@@ -1,0 +1,75 @@
+# Конфигурация проекта обработки анкет транспортных обследований
+
+paths:
+  data_dir: "data"
+  output_dir: "output"
+  
+  # Основные входные файлы (относительно data_dir)
+  surveys: "анкеты.xlsx"
+  boundaries: "границы_МО.geojson"
+  
+  # Справочники (относительно data_dir)
+  pairs_reference: "Пары.xlsx"
+  social_groups_reference: "Соцгруппы.xlsx"
+  transport_reference: "Транспорт.xlsx"
+
+# Настройки геообработки
+geo:
+  crs: "EPSG:4326"
+  boundary_name_field: "NAME"  # поле с названием территории в geojson
+
+# Настройки анализа
+analysis:
+  # Столбцы анкеты
+  columns:
+    id: "ID"
+    social_status: "Социальный статус"
+    date: "Дата перемещений"
+    origin_address: "Адрес отправления"
+    origin_coords: "Координаты отправления"
+    dest_address: "Адрес прибытия"
+    dest_coords: "Координаты прибытия"
+    origin_point: "Пункт отправления"
+    dest_point: "Пункт прибытия"
+    departure_time: "Время отправления"
+    arrival_time: "Время прибытия"
+    transport: "Транспорт"
+    comment: "Комментарий"
+
+  # Параметры BW-модели
+  bw_model:
+    bin_minutes: 5
+    max_minutes: 120
+    e_bounds: [0.01, 20.0]
+    f_bounds: [-20.0, 20.0]
+    g_bounds: [-2.0, 2.0]
+
+  # Статистические поля
+  stat_fields_by_transport:
+    - "Количество людей в машине"
+    - "Пешеходный подход к начальной остановке или парковке"
+    - "Время ожидания транспорта"
+    - "Пешеходный подход от конечной остановке или парковки"
+    - "Стоимость поездки или парковки"
+  
+  stat_fields_simple:
+    - "Количество пересадок"
+    - "Время ожидания между пересадками"
+
+# Настройки GIS-экспорта
+gis_export:
+  formats:
+    - "gpkg"      # GeoPackage — основной формат
+    - "geojson"   # GeoJSON
+    # - "shp"     # Shapefile — раскомментировать при необходимости
+  
+  layers:
+    origins: "origins"           # точки отправления
+    destinations: "destinations" # точки прибытия
+    od_lines: "od_lines"         # линии OD-пар (desire lines)
+    boundaries: "boundaries"     # границы территорий
+
+# Настройки QGIS-проекта
+qgis_project:
+  filename: "transport_survey.qgz"
+  title: "Транспортное обследование"
