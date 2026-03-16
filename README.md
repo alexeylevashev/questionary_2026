@@ -16,7 +16,7 @@
 ```bash
 pip install -r requirements.txt
 ```
-
+cl
 ## Подготовка данных
 
 Положить в папку `data/`:
