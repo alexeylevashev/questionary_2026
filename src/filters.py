@@ -126,17 +126,25 @@ def run_filter(
     # 3. Spatial join: assign zone to each trip endpoint
     # ------------------------------------------------------------------
     zones_slim = gdf_zones[[name_field, "geometry"]].copy()
+    # Sort zones by area ascending so smaller (more specific) zones win deduplication.
+    # This ensures a sub-zone like "центр" takes priority over its parent "городской округ Иркутск".
+    zones_slim = zones_slim.copy()
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")  # area on geographic CRS is fine for relative ordering
+        zones_slim["_area"] = zones_slim.geometry.area
+    zones_slim = zones_slim.sort_values("_area").drop(columns=["_area"]).reset_index(drop=True)
 
-    gdf_start = gpd.GeoDataFrame(df, geometry="_geom_start", crs=cfg.crs)
-    joined_start = gpd.sjoin(gdf_start, zones_slim, how="left", predicate="within")
-    # sjoin may produce duplicates if a point touches multiple zones; keep first
-    joined_start = joined_start[~joined_start.index.duplicated(keep="first")]
-    df["zone_start"] = joined_start[name_field].values
+    def _assign_zone(geom_col: str) -> "pd.Series":
+        gdf_pts = gpd.GeoDataFrame(df, geometry=geom_col, crs=cfg.crs)
+        joined = gpd.sjoin(gdf_pts, zones_slim, how="left", predicate="within")
+        # When a point falls inside multiple overlapping zones, sjoin returns one row per zone.
+        # After sorting zones by area ASC, the first duplicate for each index is the smallest zone.
+        joined = joined[~joined.index.duplicated(keep="first")]
+        return joined[name_field]
 
-    gdf_end = gpd.GeoDataFrame(df, geometry="_geom_end", crs=cfg.crs)
-    joined_end = gpd.sjoin(gdf_end, zones_slim, how="left", predicate="within")
-    joined_end = joined_end[~joined_end.index.duplicated(keep="first")]
-    df["zone_end"] = joined_end[name_field].values
+    df["zone_start"] = _assign_zone("_geom_start").values
+    df["zone_end"] = _assign_zone("_geom_end").values
 
     # ------------------------------------------------------------------
     # 4. Filter by origin/destination zones (bidirectional)
